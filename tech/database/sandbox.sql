@@ -27,6 +27,31 @@ CREATE TABLE HIST_DATA
     FOREIGN KEY (ticker) REFERENCES SCREENER(ticker)
 );
 
+CREATE TABLE USER
+(
+  user_id INT NOT NULL AUTO_INCREMENT,
+  user_first VARCHAR(255) NOT NULL,
+  user_last VARCHAR(255) NOT NULL,
+  user_email VARCHAR(255) NOT NULL,
+  user_phone VARCHAR(20),
+  user_address VARCHAR(255),
+  user_city VARCHAR(255),
+  user_state VARCHAR(10)
+  user_country VARCHAR(5)
+  PRIMARY KEY (user_id)
+)
+
+CREATE TABLE SECURE 
+(
+  secure_id BIGINT NOT NULL AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  pswd VARCHAR(255) NOT NULL,
+  date_set DATETIME NOT NULL,
+  date_exp DATETIME NOT NULL,
+  PRIMARY KEY (secure_id),
+  FOREIGN KEY (user_id) REFERENCES USER(user_id)
+)
+
 CREATE TABLE WATCHLIST
 (
   watch_id BIGINT NOT NULL AUTO_INCREMENT,
