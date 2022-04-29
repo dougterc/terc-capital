@@ -26,3 +26,22 @@ CREATE TABLE HIST_DATA
     PRIMARY KEY (hd_id),
     FOREIGN KEY (ticker) REFERENCES SCREENER(ticker)
 );
+
+CREATE TABLE WATCHLIST
+(
+  watch_id BIGINT NOT NULL AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  watch_name VARCHAR(255),
+  FOREIGN KEY (user_id) REFERENCES USER(user_id)
+)
+
+CREATE TABLE WL_ENTITIES
+(
+    wl_ent_id BIGINT NOT NULL AUTO_INCREMENT,
+    watch_id BIGINT NOT NULL,
+    ticker VARCHAR(10) NOT NULL,
+    user_id INT NOT NULL,
+    PRIMARY KEY (hd_id),
+    FOREIGN KEY (ticker) REFERENCES SCREENER(ticker),
+    FOREIGN KEY (user_id) REFERENCES USER(user_id)
+);
