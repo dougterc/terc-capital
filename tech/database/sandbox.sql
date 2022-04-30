@@ -7,7 +7,7 @@ CREATE TABLE SCREENER
   country VARCHAR(50),
   date_updated DATE,
   PRIMARY KEY (ticker)
-);
+)
 
 CREATE TABLE HIST_DATA
 (
@@ -25,7 +25,7 @@ CREATE TABLE HIST_DATA
     date_updated DATE,
     PRIMARY KEY (hd_id),
     FOREIGN KEY (ticker) REFERENCES SCREENER(ticker)
-);
+)
 
 CREATE TABLE USER
 (
@@ -39,6 +39,14 @@ CREATE TABLE USER
   user_state VARCHAR(10)
   user_country VARCHAR(5)
   PRIMARY KEY (user_id)
+)
+
+CREATE TABLE PORTFOLIO
+(
+  port_id BIGINT NOT NULL AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  PRIMARY KEY (port_id),
+  FOREIGN KEY (user_id) REFERENCES USER(user_id)
 )
 
 CREATE TABLE SECURE 
@@ -65,8 +73,52 @@ CREATE TABLE WL_ENTITIES
     wl_ent_id BIGINT NOT NULL AUTO_INCREMENT,
     watch_id BIGINT NOT NULL,
     ticker VARCHAR(10) NOT NULL,
-    user_id INT NOT NULL,
     PRIMARY KEY (hd_id),
     FOREIGN KEY (ticker) REFERENCES SCREENER(ticker),
-    FOREIGN KEY (user_id) REFERENCES USER(user_id)
+    FOREIGN KEY (watch_id) REFERENCES WATCHLIST(watch_id)
 );
+
+CREATE TABLE POSITION
+(
+    pos_id BIGINT NOT NULL AUTO_INCREMENT,
+    port_id BIGINT NOT NULL,
+    ticker VARCHAR(10) NOT NULL,
+    shares INT NOT NULL,
+    cost DECIMAL(10,5),
+    enter_date DATETIME,
+    close_date DATETIME,
+    broker_site VARCHAR(255),
+    pos_type VARCHAR(10),
+    PRIMARY KEY (pos_id),
+    FOREIGN KEY (ticker) REFERENCES SCREENER(ticker),
+    FOREIGN KEY (port_id) REFERENCES PORTFOLIO(port_id)
+)
+
+CREATE TABLE TRADE
+(
+    trade_id BIGINT NOT NULL AUTO_INCREMENT,
+    pos_id BIGINT NOT NULL,
+    shares INT NOT NULL,
+    trade_price DECIMAL(10,5),
+    trade_date DATETIME,
+    trade_type VARCHAR(10),
+    PRIMARY KEY (trade_id),
+    FOREIGN KEY (pos_id) REFERENCES POSITION(pos_id)
+)
+
+CREATE TABLE RESEARCH
+(
+  res_id BIGINT NOT NULL AUTO_INCREMENT,
+  trade_id BIGINT NOT NULL,
+  target_price DECIMAL(10,5),
+  target_shares INT,
+  buy_sell VARCHAR(5),
+  trailing_vol DECIMAL(10,5),
+  modelA_type VARCHAR(255),
+  modA_proj_price DECIMAL(10,5),
+  modA_proj_timeline_days INT,
+  target_weight DECIMAL(10,5),
+  pairing_stocks VARCHAR(255),
+  PRIMARY KEY (res_id),
+  FOREIGN KEY (trade_id) REFERENCES TRADE(trade_id)
+)
