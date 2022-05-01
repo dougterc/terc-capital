@@ -48,7 +48,7 @@ CREATE TABLE WL_ENTITIES
     wl_ent_id BIGINT NOT NULL AUTO_INCREMENT,
     watch_id BIGINT NOT NULL,
     ticker VARCHAR(10) NOT NULL,
-    PRIMARY KEY (hd_id),
+    PRIMARY KEY (wl_ent_ir),
     FOREIGN KEY (ticker) REFERENCES SCREENER(ticker),
     FOREIGN KEY (watch_id) REFERENCES WATCHLIST(watch_id)
 );
