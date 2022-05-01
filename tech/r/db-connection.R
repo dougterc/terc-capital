@@ -1,4 +1,4 @@
-connectDB <- function(local,user,pswd,name) {
+connectDB <- function(local,user,pswd,name) { 
   out <- tryCatch(
     {
       conn <- NA
