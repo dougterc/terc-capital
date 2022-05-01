@@ -7,7 +7,7 @@ CREATE TABLE SCREENER
   country VARCHAR(50),
   date_updated DATE,
   PRIMARY KEY (ticker)
-)
+);
 
 CREATE TABLE HIST_DATA
 (
@@ -25,7 +25,7 @@ CREATE TABLE HIST_DATA
     date_updated DATE,
     PRIMARY KEY (hd_id),
     FOREIGN KEY (ticker) REFERENCES SCREENER(ticker)
-)
+);
 
 CREATE TABLE USER
 (
@@ -36,10 +36,10 @@ CREATE TABLE USER
   user_phone VARCHAR(20),
   user_address VARCHAR(255),
   user_city VARCHAR(255),
-  user_state VARCHAR(10)
-  user_country VARCHAR(5)
+  user_state VARCHAR(10),
+  user_country VARCHAR(5),
   PRIMARY KEY (user_id)
-)
+);
 
 CREATE TABLE PORTFOLIO
 (
@@ -47,7 +47,7 @@ CREATE TABLE PORTFOLIO
   user_id INT NOT NULL,
   PRIMARY KEY (port_id),
   FOREIGN KEY (user_id) REFERENCES USER(user_id)
-)
+);
 
 CREATE TABLE SECURE 
 (
@@ -58,7 +58,7 @@ CREATE TABLE SECURE
   date_exp DATETIME NOT NULL,
   PRIMARY KEY (secure_id),
   FOREIGN KEY (user_id) REFERENCES USER(user_id)
-)
+);
 
 CREATE TABLE WATCHLIST
 (
@@ -66,7 +66,7 @@ CREATE TABLE WATCHLIST
   user_id INT NOT NULL,
   watch_name VARCHAR(255),
   FOREIGN KEY (user_id) REFERENCES USER(user_id)
-)
+);
 
 CREATE TABLE WL_ENTITIES
 (
@@ -78,7 +78,7 @@ CREATE TABLE WL_ENTITIES
     FOREIGN KEY (watch_id) REFERENCES WATCHLIST(watch_id)
 );
 
-CREATE TABLE POSITION
+CREATE TABLE POSITIONS
 (
     pos_id BIGINT NOT NULL AUTO_INCREMENT,
     port_id BIGINT NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE POSITION
     PRIMARY KEY (pos_id),
     FOREIGN KEY (ticker) REFERENCES SCREENER(ticker),
     FOREIGN KEY (port_id) REFERENCES PORTFOLIO(port_id)
-)
+);
 
 CREATE TABLE TRADE
 (
@@ -103,8 +103,8 @@ CREATE TABLE TRADE
     trade_date DATETIME,
     trade_type VARCHAR(10),
     PRIMARY KEY (trade_id),
-    FOREIGN KEY (pos_id) REFERENCES POSITION(pos_id)
-)
+    FOREIGN KEY (pos_id) REFERENCES POSITIONS(pos_id)
+);
 
 CREATE TABLE RESEARCH
 (
@@ -121,4 +121,4 @@ CREATE TABLE RESEARCH
   pairing_stocks VARCHAR(255),
   PRIMARY KEY (res_id),
   FOREIGN KEY (trade_id) REFERENCES TRADE(trade_id)
-)
+);
