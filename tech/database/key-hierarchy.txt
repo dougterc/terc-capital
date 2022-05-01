@@ -1,0 +1,30 @@
+1. SCREENER
+    - PK: ticker
+2. USER
+    - PK: user_id
+3. PORTFOLIO
+    - PK: port_id
+    - FK: USER(user_id)
+4. WATCHLIST
+    - PK: watch_id
+    - FK: PORTFOLIO(port_id)
+5. WL_ENTITIES
+    - PK: wl_ent_id
+    - FK: WATCHLIST(watch_id)
+    - FK: SCREENER(ticker)
+6. HIST_DATA
+    - PK: hd_id
+    - FK: SCREENER(ticker)
+7. SECURE
+    - PK: ticker
+    - FK: USER(user_id)
+8. POSITIONS
+    - PK: pos_id
+    - FK: PORTFOLIO(port_id)
+    - FK: SCREENER(ticker)
+9. TRADE
+    - PK: trade_id
+    - FK: POSITIONS(pos_id)
+10. RESEARCH
+    - PK: res_id
+    - FK: TRADE(trade_id)
