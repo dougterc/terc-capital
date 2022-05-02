@@ -1,4 +1,4 @@
-loadPackages <- function() {
+packages.load <- function() {
   require(scales)
   require(AER)
   require(tidyverse)
