@@ -1,4 +1,4 @@
-screener.try <- function(filters,header,page) {
+screener.fetch <- function(filters,header,page) {
   #child function to get screener and format
   get_screener <- function(filters,header,page,node) {
     #stop as a bool variable to stop loop
@@ -7,6 +7,7 @@ screener.try <- function(filters,header,page) {
     i <- 1
     #set table hCodes as text-to-number key for proper numerical codes for link 
     # construction
+    #headers are from the FinViz screener tab. Use Overview for general info
     hCodes <- tribble(
       ~Header,~Code,
       "Overview",111,
@@ -27,21 +28,25 @@ screener.try <- function(filters,header,page) {
     while(stop == FALSE & i <= pCode) {
       #assign url as html object such that a link is built and used as argument in a 
       # call to read_html()
+      #v argument in url is header
+      #r argument in url is index of first element on each page
       url <- read_html(
         paste("https://finviz.com/screener.ashx?",
               "v=",hCode,filters,"&r=",(((i-1)*20)+1),
               sep=""))
       #message status
+      #if less than 2, it is testing nodes
       if(i <= 2) {
         cat(paste0("Searching Node[",node,"]...")," \r")
         flush.console()
       } else {
+        #if past 2, it is working and will print messages each page
         cat(paste0("Reading and Converting | ",(((i-1)*20)+1))," \r")
         flush.console()
       }
       #assign tables as html nodes
       tables <- html_nodes(url,"table")
-      #assign screen as dataframe with proper node (11) selected from tables
+      #assign screen as dataframe with proper node found
       screen <- tables %>% html_nodes("table") %>% .[node] %>% 
         html_table(fill=TRUE) %>% data.frame()
       #set columnnames of screen as the first row from screen, as this is how data 
@@ -71,6 +76,7 @@ screener.try <- function(filters,header,page) {
       }
       #upgrade iterator i by 1
       i <- i+1
+      #sys sleep to allow catching up and prevent crashing
       Sys.sleep(0.25)
     }
     #if page wanted is Overview
@@ -80,17 +86,22 @@ screener.try <- function(filters,header,page) {
         `colnames<-`(
           c("Ticker","Company","Sector","Industry","Country",
             "MktCap","PE","Price","Change","Volume")) %>%
+        #convert large numbers to units of B, M, or K
         transform(MktCap = case_when(
           MktCap == "-" ~ 0,
           grepl("B", MktCap, fixed=TRUE) ~ as.numeric(gsub("B",'',MktCap))*1000000000,
           grepl("M", MktCap, fixed=TRUE) ~ as.numeric(gsub("M",'',MktCap))*1000000,
           grepl("K", MktCap, fixed=TRUE) ~ as.numeric(gsub("K",'',MktCap))*1000),
+          #convert - to 0 in PE ratio
           PE = case_when(PE == "-" ~ 0, PE != "-" ~ as.numeric(PE)),
+          #remove symbols and convert to numeric
           Price = as.numeric(Price),
           Change = as.numeric(gsub("%",'',Change)),
           Volume = as.numeric(gsub(",",'',Volume))
         ) %>%
+        #remove duplicate rows
         unique() %>%
+        #add date updated
         mutate(DateUpdated = Sys.Date())
     }
     #if page wanted is Valuation
@@ -401,156 +412,7 @@ screener.try <- function(filters,header,page) {
   return(out)
 }
 
-screener.insert_sql <- function(screener,connection) {
-  insert_ready <- screener %>%
-    transform(Company = gsub("'","*",Company)) %>%
-    transform(Sector = gsub("'","*",Sector)) %>%
-    transform(Industry = gsub("'","*",Industry)) %>%
-    mutate(insert = paste0("(",
-                           "'",Ticker,"'",",",
-                           "'",Company,"'",",",
-                           "'",Sector,"'",",",
-                           "'",Industry,"'",",",
-                           "'",Country,"'",",",
-                           "'",Sys.time(),"'",
-                           ")"))
-  #insert statement
-  insert_state <- paste0(
-    "INSERT INTO SCREENER VALUES ",
-    paste(insert_ready$insert,collapse = ","),
-    ";"
-  )
-  #insert into SQL
-  tryCatch(
-    {
-      dbGetQuery(connection,insert_state)
-      message(paste0(nrow(insert_ready)," inserted into SCREENER."))
-    },
-    error=function(cond) {
-      #failure
-      message("The data entry into SCREENER failed")
-      message(cond)
-    },
-    warning=function(cond) {
-      #warning
-      message("The data was inserted into SCREENER, but a warning was raised.")
-      message(cond)
-    },
-    finally={
-      #regardless
-      
-    }
-  )    
-}
-
-screener.find_node <- function() {
-  screener.test_node <- function(node) {
-    filters <- ""
-    header <- "Overview"
-    stop <- FALSE
-    i <- 1
-    hCodes <- tribble(
-      ~Header,~Code,
-      "Overview",111,
-      "Valuation",121,
-      "Financial",161,
-      "Ownership",131,
-      "Performance",141,
-      "Technical",171
-    )
-    hCode <- hCodes$Code[grep(header,hCodes$Header)]
-    pCode <- 3
-    while(stop == FALSE & i <= pCode) {
-      url <- read_html(
-        paste("https://finviz.com/screener.ashx?",
-              "v=",hCode,filters,"&r=",(((i-1)*20)+1),
-              sep=""))
-      if(i <= 2) {
-        cat(paste0("Searching Node[",node,"]...")," \r")
-        flush.console()
-      } else {
-        cat(paste0("Reading and Converting | ",(((i-1)*20)+1))," \r")
-        flush.console()
-        break
-      }
-      tables <- html_nodes(url,"table")
-      screen <- tables %>% html_nodes("table") %>% .[node] %>% 
-        html_table(fill=TRUE) %>% data.frame()
-      colnames(screen) <- screen[1,]
-      screen <- screen[-1,]
-      rownames(screen) <- c()
-      if(i == 1) {
-        cScreener <- screen
-      } 
-      if(nrow(screen)==20 & i != 1) {
-        cScreener <- rbind(cScreener,screen)
-      }
-      if(nrow(screen)!=20 & i != 1) {
-        cScreener <- rbind(cScreener,screen)
-        stop <- TRUE
-      }
-      i <- i+1
-      Sys.sleep(0.25)
-    }
-    cScreener <- cScreener %>%
-        select(Ticker:Volume) %>%
-        `colnames<-`(
-          c("Ticker","Company","Sector","Industry","Country",
-            "MktCap","PE","Price","Change","Volume")) %>%
-        #convert large numbers to units of B, M, or K
-        transform(MktCap = case_when(
-          MktCap == "-" ~ 0,
-          grepl("B", MktCap, fixed=TRUE) ~ as.numeric(gsub("B",'',MktCap))*1000000000,
-          grepl("M", MktCap, fixed=TRUE) ~ as.numeric(gsub("M",'',MktCap))*1000000,
-          grepl("K", MktCap, fixed=TRUE) ~ as.numeric(gsub("K",'',MktCap))*1000),
-          #convert - to 0 in PE ratio
-          PE = case_when(PE == "-" ~ 0, PE != "-" ~ as.numeric(PE)),
-          #remove symbols and convert to numeric
-          Price = as.numeric(Price),
-          Change = as.numeric(gsub("%",'',Change)),
-          Volume = as.numeric(gsub(",",'',Volume))
-        ) %>%
-        #remove duplicate rows
-        unique() %>%
-        #add date updated
-        mutate(DateUpdated = Sys.Date())
-    #return node
-    return(node)
-  }
-  skip_to_next <- FALSE
-  message("Finding node.")
-  for(node in c(1:40)) {
-    out <- tryCatch(
-      {
-        n <- screener.test_node(node)
-        cat("\n")
-        message(paste0("Success. Correct node is ",n))
-        return(n)
-      },
-      error=function(cond) {
-        skip_to_next <<- TRUE
-        return(NA)
-      },
-      finally={
-        
-      }
-    )
-    #if skip bool is true, increase node option by 1
-    if(skip_to_next) { next }
-  }
-}
-
-
-screener.update <- function(db) {
-  numStk <- dbGetQuery(db,"SELECT COUNT(Ticker) FROM SCREENER;")[[1]]
-  pages <- numStk / 20
-  lp_rows <- numStk %% 20
-  lp <- floor(pages)+1
-  last <- screener.try("","Overview",lp)
-}
-
-
-
-
-
-
+#no filters
+#Overview tab from finviz.com Screener
+#Page 0 means as many pages as there are
+screener.fetchh("","Overview",0)
