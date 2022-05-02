@@ -469,7 +469,7 @@ screener.find_node <- function() {
         cat(paste0("Searching Node[",node,"]...")," \r")
         flush.console()
       } else {
-        cat(paste0("Reading and Converting | ",(((i-1)*20)+1))," \r")
+        cat(paste0("Reading and Converting..."," \r")
         flush.console()
         break
       }
