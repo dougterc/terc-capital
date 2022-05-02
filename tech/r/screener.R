@@ -1,4 +1,4 @@
-try_screener <- function(filters,header,page) {
+screener.try <- function(filters,header,page) {
   #child function to get screener and format
   get_screener <- function(filters,header,page,node) {
     #stop as a bool variable to stop loop
@@ -400,3 +400,49 @@ try_screener <- function(filters,header,page) {
   #return result of screener search
   return(out)
 }
+
+screener.insert_sql <- function(screener,connection) {
+  insert_ready <- screener %>%
+    transform(Company = gsub("'","*",Company)) %>%
+    transform(Sector = gsub("'","*",Sector)) %>%
+    transform(Industry = gsub("'","*",Industry)) %>%
+    mutate(insert = paste0("(",
+                           "'",Ticker,"'",",",
+                           "'",Company,"'",",",
+                           "'",Sector,"'",",",
+                           "'",Industry,"'",",",
+                           "'",Country,"'",",",
+                           "'",Sys.time(),"'",
+                           ")"))
+  #insert statement
+  insert_state <- paste0(
+    "INSERT INTO SCREENER VALUES ",
+    paste(insert_ready$insert,collapse = ","),
+    ";"
+  )
+  #insert into SQL
+  tryCatch(
+    {
+      dbGetQuery(connection,insert_state)
+      message(paste0(nrow(insert_ready)," inserted into SCREENER."))
+    },
+    error=function(cond) {
+      #failure
+      message("The data entry into SCREENER failed")
+      message(cond)
+    },
+    warning=function(cond) {
+      #warning
+      message("The data was inserted into SCREENER, but a warning was raised.")
+      message(cond)
+    },
+    finally={
+      #regardless
+      
+    }
+  )    
+}
+
+
+
+
