@@ -5,7 +5,7 @@ CREATE TABLE SCREENER
   sector VARCHAR(125),
   industry VARCHAR(255),
   country VARCHAR(50),
-  date_updated DATE,
+  date_updated DATETIME,
   PRIMARY KEY (ticker)
 );
 
@@ -66,7 +66,7 @@ CREATE TABLE HIST_DATA
     c_return FLOAT,
     a_return FLOAT,
     volume INT,
-    date_updated DATE,
+    date_updated DATETIME,
     PRIMARY KEY (hd_id),
     FOREIGN KEY (ticker) REFERENCES SCREENER(ticker)
 );
