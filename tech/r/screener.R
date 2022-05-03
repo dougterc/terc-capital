@@ -517,22 +517,46 @@ screener.find_node <- function() {
 }
 
 screener.update <- function(db) {
+  '%!in%' <- function(x,y)!('%in%'(x,y))
   numStk <- dbGetQuery(db,"SELECT COUNT(Ticker) FROM SCREENER;")[[1]]
   pages <- numStk / 20
   lp_rows <- numStk %% 20
   lp <- floor(pages)+1
   node <- screener.find_node()
-  last <- screener.get("","Overview",0,node)
+  last <- screener.get("","Overview",lp,node)
   if(nrow(last)==lp_rows) {
     #no update
-    
+    message("Screener in database is up to date.")
   } else {
-    #update screener
-
-    #find differences
-
-    #insert differences to sql
-
+    stop <- FALSE
+    new <- c()
+    a <- 1
+    while(stop == FALSE) {
+      diff <- nrow(last)-lp_rows
+      oldTicks <- dbGetQuery(db,"SELECT Ticker FROM SCREENER;")
+      b <- a+19
+      currSel <- screener.get("","Overview",c(a,b),node)
+      if(a == 1) {
+        full <- currSel %>%
+          filter(Ticker %in% c())
+      }
+      currTick <- currSel %>%
+        select(Ticker)
+      temp <- c(currTick[!currTick$Ticker%in%oldTicks$Ticker,])
+      if(length(temp) > 0) {
+        new <- append(new,temp)
+        full <- rbind(full,currSel)
+      }
+      if(length(new) >= diff) {
+        stop <- TRUE
+      }
+      if(stop == FALSE) {
+        a <- b+1
+      }
+    }
+    new_stocks <- currSel %>%
+      filter(Ticker %in% new)
+    screener.insert_sql(new_stocks,db)
   }
 }
 
