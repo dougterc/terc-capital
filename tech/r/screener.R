@@ -1,5 +1,5 @@
 screener.get <- function(filters,header,page,node) {
-  #stop as a bool variable to stop loop
+   #stop as a bool variable to stop loop
 stop <- FALSE
 #set iterator i to 1 to be used in read-in while loop
 i <- 1
@@ -20,7 +20,16 @@ hCode <- hCodes$Code[grep(header,hCodes$Header)]
 #assign pCode as a numerical page counter in loop based on page argument
 # such that page==0 means all pages, otherwise the amount of pages to be 
 # read in
-pCode <- case_when(page==0 ~ 600, page!=0 ~ page)
+if(length(page) == 1) {
+  #get specific page
+  i <- case_when(page==0 ~ 1, page!=0 ~ page)
+  pCode <- case_when(page==0 ~ 600, page!=0 ~ page)
+  init <- case_when(page==0 ~ 1, page!=0 ~ page)
+} else {
+  i <- min(page)
+  pCode <- max(page)
+  init <- min(page)
+}
 #while loop such that stop variable is FALSE and the iterator i is less than or
 # equal to pCode
 while(stop == FALSE & i <= pCode) {
@@ -34,14 +43,8 @@ while(stop == FALSE & i <= pCode) {
           sep=""))
   #message status
   #if less than 2, it is testing nodes
-  if(i <= 2) {
-    cat(paste0("Searching Node[",node,"]...")," \r")
-    flush.console()
-  } else {
-    #if past 2, it is working and will print messages each page
-    cat(paste0("Reading and Converting | ",(((i-1)*20)+1))," \r")
-    flush.console()
-  }
+  message(paste0("Reading and Converting | ",(((i-1)*20)+1)),"\r",appendLF = FALSE)
+  flush.console()
   #assign tables as html nodes
   tables <- html_nodes(url,"table")
   #assign screen as dataframe with proper node found
@@ -56,16 +59,16 @@ while(stop == FALSE & i <= pCode) {
   #clear rownames of screen
   rownames(screen) <- c()
   #if in first iteration
-  if(i == 1) {
+  if(i == init) {
     #assign cScreener as screen
     cScreener <- screen
   } 
-  if(nrow(screen)==20 & i != 1) {
+  if(nrow(screen)==20 & i != init) {
     #if iteration is greater than one and screen is full, thus 20 rows long, 
     # combine screen onto existing cScreener and assign to cScreener
     cScreener <- rbind(cScreener,screen)
   }
-  if(nrow(screen)!=20 & i != 1) {
+  if(nrow(screen)!=20 & i != init) {
     #if iteration is greater than one and screen is not full, thus not 20 rows 
     # long, combine screen onto existing cScreener and assign to cScreener, then 
     # assign value of TRUE to stop variable
@@ -75,7 +78,7 @@ while(stop == FALSE & i <= pCode) {
   #upgrade iterator i by 1
   i <- i+1
   #sys sleep to allow catching up and prevent crashing
-  Sys.sleep(0.25)
+  Sys.sleep(0.125)
 }
 #if page wanted is Overview
 if(hCode == 111) {
@@ -370,6 +373,7 @@ if(hCode == 171) {
     unique() %>%
     mutate(DateUpdated = Sys.Date())
 }
+cat("\n")
 #return cScreener
 return(cScreener)
 }
@@ -413,7 +417,7 @@ screener.insert_sql <- function(screener,connection) {
       #regardless
       
     }
-  )    
+  )
 }
 
 screener.find_node <- function() {
@@ -439,10 +443,9 @@ screener.find_node <- function() {
               "v=",hCode,filters,"&r=",(((i-1)*20)+1),
               sep=""))
       if(i <= 2) {
-        cat(paste0("Searching Node[",node,"]...")," \r")
+        message(paste0("Searching Node[",node,"]..."),"\r",appendLF = FALSE)
         flush.console()
       } else {
-        cat(paste0("Reading and Converting..."," \r"))
         flush.console()
         break
       }
@@ -463,7 +466,7 @@ screener.find_node <- function() {
         stop <- TRUE
       }
       i <- i+1
-      Sys.sleep(0.25)
+      Sys.sleep(0.125)
     }
     cScreener <- cScreener %>%
         select(Ticker:Volume) %>%
@@ -513,13 +516,24 @@ screener.find_node <- function() {
   }
 }
 
-
 screener.update <- function(db) {
   numStk <- dbGetQuery(db,"SELECT COUNT(Ticker) FROM SCREENER;")[[1]]
   pages <- numStk / 20
   lp_rows <- numStk %% 20
   lp <- floor(pages)+1
-  last <- screener.try("","Overview",lp)
+  node <- screener.find_node()
+  last <- screener.get("","Overview",0,node)
+  if(nrow(last)==lp_rows) {
+    #no update
+    
+  } else {
+    #update screener
+
+    #find differences
+
+    #insert differences to sql
+
+  }
 }
 
 
