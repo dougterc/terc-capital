@@ -6,6 +6,7 @@ CREATE TABLE SCREENER
   industry VARCHAR(255),
   country VARCHAR(50),
   date_updated DATETIME,
+  active BOOLEAN,
   PRIMARY KEY (ticker)
 );
 

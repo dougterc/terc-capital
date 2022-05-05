@@ -389,7 +389,8 @@ screener.insert_sql <- function(screener,connection) {
                            "'",Sector,"'",",",
                            "'",Industry,"'",",",
                            "'",Country,"'",",",
-                           "'",Sys.time(),"'",
+                           "'",Sys.time(),"'",",",
+                           "TRUE",
                            ")"))
   #insert statement
   insert_state <- paste0(
@@ -517,10 +518,34 @@ screener.find_node <- function() {
 }
 
 screener.delete_sql <- function(screener,connection) {
-
+  insert <- screener %>%
+    mutate(insert = paste0("'",ticker,"'"))
+  statement <- paste0(
+    "UPDATE SCREENER SET active = FALSE WHERE ticker IN (",
+    paste(insert$insert,collapse=','),");")
+  tryCatch(
+    {
+      dbGetQuery(connection,statement)
+      message(paste0(nrow(insert)," set to 'Inactive' in SCREENER."))
+    },
+    error=function(cond) {
+      #failure
+      message("The active switch change in SCREENER failed.")
+      message(cond)
+    },
+    warning=function(cond) {
+      #warning
+      message("The data was turned to inactive in SCREENER, but a warning was raised.")
+      message(cond)
+    },
+    finally={
+      #regardless
+      
+    }
+  )
 }
 
-screener.update <- function(db) {
+screener.update.old <- function(db) {
   '%!in%' <- function(x,y)!('%in%'(x,y))
   numStk <- dbGetQuery(db,"SELECT COUNT(Ticker) FROM SCREENER;")[[1]]
   pages <- numStk / 20
@@ -536,6 +561,7 @@ screener.update <- function(db) {
     stop <- FALSE
     new <- c()
     a <- 1
+    otstart <- 1
     while(stop == FALSE) {
       message(length(new))
       oldTicks <- dbGetQuery(db,"SELECT Ticker FROM SCREENER;")
@@ -578,8 +604,19 @@ screener.update <- function(db) {
   }
 }
 
-
-
-
-
+screener.update <- function(db) {
+  '%!in%' <- function(x,y)!('%in%'(x,y))
+  finviz <- screener.get("","Overview",0,node)
+  database <- dbGetQuery(db,"SELECT * FROM SCREENER;")
+  ins <- finviz %>%
+    filter(Ticker %!in% database$ticker)
+  del <- database %>%
+    filter(ticker %!in% finviz$Ticker)
+  if(nrow(ins)>0) {
+    screener.insert_sql(ins,db)
+  }
+  if(nrow(del)>0) {
+    screener.delete_sql(del,db)
+  }
+}
 
