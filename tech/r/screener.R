@@ -521,7 +521,9 @@ screener.delete_sql <- function(screener,connection) {
   insert <- screener %>%
     mutate(insert = paste0("'",ticker,"'"))
   statement <- paste0(
-    "UPDATE SCREENER SET active = FALSE WHERE ticker IN (",
+    "UPDATE SCREENER SET active = FALSE, date_updated = ",
+    "'",Sys.time(),"'",
+    " WHERE ticker IN (",
     paste(insert$insert,collapse=','),");")
   tryCatch(
     {
@@ -545,69 +547,10 @@ screener.delete_sql <- function(screener,connection) {
   )
 }
 
-screener.update.old <- function(db) {
-  '%!in%' <- function(x,y)!('%in%'(x,y))
-  numStk <- dbGetQuery(db,"SELECT COUNT(Ticker) FROM SCREENER;")[[1]]
-  pages <- numStk / 20
-  lp_rows <- numStk %% 20
-  lp <- floor(pages)+1
-  node <- screener.find_node()
-  last <- screener.get("","Overview",lp,node)
-  diff <- nrow(last)-lp_rows
-  if(nrow(last)==lp_rows) {
-    #no update
-    message("Screener in database is up to date.")
-  } else {
-    stop <- FALSE
-    new <- c()
-    a <- 1
-    otstart <- 1
-    while(stop == FALSE) {
-      message(length(new))
-      oldTicks <- dbGetQuery(db,"SELECT Ticker FROM SCREENER;")
-      b <- a+19
-      currSel <- screener.get("","Overview",c(a,b),node)
-      if(a == 1) {
-        full <- currSel %>%
-          filter(Ticker %in% c())
-      }
-      currTick <- currSel %>%
-        select(Ticker)
-      if(diff > 0) {
-        temp <- c(currTick[!currTick$Ticker%in%oldTicks$Ticker,])
-        message(temp)
-      } else {
-        temp <- c(oldTicks[!oldTicks$Ticker%in%currTick$Ticker,])
-      }
-      if(length(temp) > 0) {
-        new <- append(new,temp)
-        full <- rbind(full,currSel)
-      }
-      if(length(new) >= abs(diff)) {
-        stop <- TRUE
-      }
-      if(stop == FALSE) {
-        a <- b+1
-      }
-    }
-    if(diff > 0) {
-      new_stocks <- full %>%
-        filter(Ticker %in% new)
-      screener.insert_sql(new_stocks,db)
-    } 
-    if(diff < 0) {
-      rem_stocks <- full %>%
-        filter(Ticker %in% new)
-        screener.delete_sql(rem_stocks,db)
-    }
-    
-  }
-}
-
 screener.update <- function(db) {
   '%!in%' <- function(x,y)!('%in%'(x,y))
   finviz <- screener.get("","Overview",0,node)
-  database <- dbGetQuery(db,"SELECT * FROM SCREENER;")
+  database <- dbGetQuery(db,"SELECT * FROM SCREENER WHERE active = 1;")
   ins <- finviz %>%
     filter(Ticker %!in% database$ticker)
   del <- database %>%
@@ -617,6 +560,9 @@ screener.update <- function(db) {
   }
   if(nrow(del)>0) {
     screener.delete_sql(del,db)
+  }
+  if(nrow(ins)==0 && nrow(del)==0) {
+    message("The database is current.")
   }
 }
 

@@ -8,14 +8,8 @@ packages.load()
 mydb <- database.connect(TRUE,'root','Rangers2014!','terc-capital')
 node <- screener.find_node()
 s <- screener.get("","Overview",0,node)
-screener.insert_sql(s,mydb)
+#screener.insert_sql(s,mydb)
 #update screener
 screener.update(mydb)
-
-
-
-#initial screener insertion
-screener.insert_sql(screener.get("","Overview",0,screener.find_node()),mydb)
-
 
 
