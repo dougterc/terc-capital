@@ -1,6 +1,7 @@
 CREATE TABLE SCREENER
 (
   ticker VARCHAR(10) NOT NULL,
+  exchange VARCHAR(10),
   company VARCHAR(255),
   sector VARCHAR(125),
   industry VARCHAR(255),

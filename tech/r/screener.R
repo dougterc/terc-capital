@@ -1,37 +1,47 @@
-screener.get <- function(filters,header,page,node) {
-   #stop as a bool variable to stop loop
-stop <- FALSE
-#set iterator i to 1 to be used in read-in while loop
-i <- 1
-#set table hCodes as text-to-number key for proper numerical codes for link 
-# construction
-#headers are from the FinViz screener tab. Use Overview for general info
-hCodes <- tribble(
-  ~Header,~Code,
-  "Overview",111,
-  "Valuation",121,
-  "Financial",161,
-  "Ownership",131,
-  "Performance",141,
-  "Technical",171
-)
-#assign hCode as a numerical code used in link construction
-hCode <- hCodes$Code[grep(header,hCodes$Header)]
-#assign pCode as a numerical page counter in loop based on page argument
-# such that page==0 means all pages, otherwise the amount of pages to be 
-# read in
-if(length(page) == 1) {
-  #get specific page
-  i <- case_when(page==0 ~ 1, page!=0 ~ page)
-  pCode <- case_when(page==0 ~ 600, page!=0 ~ page)
-  init <- case_when(page==0 ~ 1, page!=0 ~ page)
-} else {
-  i <- min(page)
-  pCode <- max(page)
-  init <- min(page)
-}
-#while loop such that stop variable is FALSE and the iterator i is less than or
-# equal to pCode
+screener.get <- function(exchange, header, page, node) {
+  #exchange
+  exch <- tribble(
+    ~Exchange,~Code,
+    "NASDAQ","nasd",
+    "AMEX","amex",
+    "NYSE","nyse"
+  )
+  ex <- exchange
+  exchange <- exch$Code[grep(exchange,exch$Exchange)]
+  filters <- paste0("&f=exch_",exchange)
+  #stop as a bool variable to stop loop
+  stop <- FALSE
+  #set iterator i to 1 to be used in read-in while loop
+  i <- 1
+  #set table hCodes as text-to-number key for proper numerical codes for link 
+  # construction
+  #headers are from the FinViz screener tab. Use Overview for general info
+  hCodes <- tribble(
+    ~Header,~Code,
+    "Overview",111,
+    "Valuation",121,
+    "Financial",161,
+    "Ownership",131,
+    "Performance",141,
+    "Technical",171
+  )
+  #assign hCode as a numerical code used in link construction
+  hCode <- hCodes$Code[grep(header,hCodes$Header)]
+  #assign pCode as a numerical page counter in loop based on page argument
+  # such that page==0 means all pages, otherwise the amount of pages to be 
+  # read in
+  if(length(page) == 1) {
+    #get specific page
+    i <- case_when(page==0 ~ 1, page!=0 ~ page)
+    pCode <- case_when(page==0 ~ 600, page!=0 ~ page)
+    init <- case_when(page==0 ~ 1, page!=0 ~ page)
+  } else {
+    i <- min(page)
+    pCode <- max(page)
+    init <- min(page)
+  }
+  #while loop such that stop variable is FALSE and the iterator i is less than or
+  # equal to pCode
 while(stop == FALSE & i <= pCode) {
   #assign url as html object such that a link is built and used as argument in a 
   # call to read_html()
@@ -373,50 +383,68 @@ if(hCode == 171) {
     unique() %>%
     mutate(DateUpdated = Sys.Date())
 }
+cScreener <- cScreener %>%
+  mutate(Exchange = ex)
 cat("\n")
 #return cScreener
 return(cScreener)
 }
 
-screener.insert_sql <- function(screener,connection) {
+screener.insert_sql <- function(screener, connection) {
   insert_ready <- screener %>%
-    transform(Company = gsub("'","*",Company)) %>%
-    transform(Sector = gsub("'","*",Sector)) %>%
-    transform(Industry = gsub("'","*",Industry)) %>%
+    transform(Company = gsub("'", "*", Company)) %>%
+    transform(Sector = gsub("'", "*", Sector)) %>%
+    transform(Industry = gsub("'", "*", Industry)) %>%
     mutate(insert = paste0("(",
-                           "'",Ticker,"'",",",
-                           "'",Company,"'",",",
-                           "'",Sector,"'",",",
-                           "'",Industry,"'",",",
-                           "'",Country,"'",",",
-                           "'",Sys.time(),"'",",",
+                           "'", Ticker, "'", ",",
+                           "'", Exchange, "'", ",",
+                           "'", Company, "'", ",",
+                           "'", Sector, "'", ",",
+                           "'", Industry, "'", ",",
+                           "'", Country, "'", ",",
+                           "'", Sys.time(), "'", ",",
                            "TRUE",
                            ")"))
   #insert statement
   insert_state <- paste0(
     "INSERT INTO SCREENER VALUES ",
-    paste(insert_ready$insert,collapse = ","),
+    paste(insert_ready$insert, collapse = ","),
     ";"
   )
   #insert into SQL
   tryCatch(
     {
       dbGetQuery(connection,insert_state)
-      message(paste0(nrow(insert_ready)," inserted into SCREENER."))
+      message(
+        paste0(
+          nrow(insert_ready),
+          " inserted into SCREENER for ",
+          insert_ready$Exchange[1],
+          ".")
+          )
     },
-    error=function(cond) {
+    error = function(cond) {
       #failure
-      message("The data entry into SCREENER failed")
+      message(
+        paste0(
+          "The data entry into SCREENER failed for ",
+          insert_ready$Exchange[1],
+          ".")
+          )
       message(cond)
     },
-    warning=function(cond) {
+    warning = function(cond) {
       #warning
-      message("The data was inserted into SCREENER, but a warning was raised.")
+      message(
+        paste0(
+          "The data was inserted into SCREENER for ",
+          insert_ready$Exchange[1],
+          " but a warning was raised.")
+          )
       message(cond)
     },
-    finally={
+    finally = {
       #regardless
-      
     }
   )
 }
@@ -428,64 +456,80 @@ screener.find_node <- function() {
     stop <- FALSE
     i <- 1
     hCodes <- tribble(
-      ~Header,~Code,
-      "Overview",111,
-      "Valuation",121,
-      "Financial",161,
-      "Ownership",131,
-      "Performance",141,
-      "Technical",171
+      ~Header, ~Code,
+      "Overview", 111,
+      "Valuation", 121,
+      "Financial", 161,
+      "Ownership", 131,
+      "Performance", 141,
+      "Technical", 171
     )
-    hCode <- hCodes$Code[grep(header,hCodes$Header)]
+    hCode <- hCodes$Code[grep(header, hCodes$Header)]
     pCode <- 3
-    while(stop == FALSE & i <= pCode) {
+    while (stop == FALSE & i <= pCode) {
       url <- read_html(
         paste("https://finviz.com/screener.ashx?",
-              "v=",hCode,filters,"&r=",(((i-1)*20)+1),
-              sep=""))
-      if(i <= 2) {
-        message(paste0("Searching Node[",node,"]..."),"\r",appendLF = FALSE)
+              "v=", hCode, filters, "&r=", (((i - 1) * 20) + 1),
+              sep = ""))
+      if (i <= 2) {
+        message(paste0("Searching Node[", node, "]..."), "\r", appendLF = FALSE)
         flush.console()
       } else {
         flush.console()
         break
       }
-      tables <- html_nodes(url,"table")
-      screen <- tables %>% html_nodes("table") %>% .[node] %>% 
-        html_table(fill=TRUE) %>% data.frame()
-      colnames(screen) <- screen[1,]
-      screen <- screen[-1,]
+      tables <- html_nodes(url, "table")
+      screen <- tables %>%
+        html_nodes("table") %>%
+        .[node] %>%
+        html_table(fill = TRUE) %>%
+        data.frame()
+      colnames(screen) <- screen[1, ]
+      screen <- screen[-1, ]
       rownames(screen) <- c()
       if(i == 1) {
         cScreener <- screen
-      } 
-      if(nrow(screen)==20 & i != 1) {
-        cScreener <- rbind(cScreener,screen)
       }
-      if(nrow(screen)!=20 & i != 1) {
-        cScreener <- rbind(cScreener,screen)
+      if (nrow(screen) == 20 & i != 1) {
+        cScreener <- rbind(cScreener, screen)
+      }
+      if (nrow(screen) != 20 & i != 1) {
+        cScreener <- rbind(cScreener, screen)
         stop <- TRUE
       }
-      i <- i+1
+      i <- i + 1
       Sys.sleep(0.125)
     }
     cScreener <- cScreener %>%
         select(Ticker:Volume) %>%
         `colnames<-`(
-          c("Ticker","Company","Sector","Industry","Country",
-            "MktCap","PE","Price","Change","Volume")) %>%
+          c(
+            "Ticker",
+            "Company",
+            "Sector",
+            "Industry",
+            "Country",
+            "MktCap",
+            "PE",
+            "Price",
+            "Change",
+            "Volume")
+            ) %>%
         #convert large numbers to units of B, M, or K
         transform(MktCap = case_when(
           MktCap == "-" ~ 0,
-          grepl("B", MktCap, fixed=TRUE) ~ as.numeric(gsub("B",'',MktCap))*1000000000,
-          grepl("M", MktCap, fixed=TRUE) ~ as.numeric(gsub("M",'',MktCap))*1000000,
-          grepl("K", MktCap, fixed=TRUE) ~ as.numeric(gsub("K",'',MktCap))*1000),
+          grepl("B", MktCap, fixed = TRUE) ~
+            as.numeric(gsub("B", "", MktCap)) * 1000000000,
+          grepl("M", MktCap, fixed = TRUE) ~
+            as.numeric(gsub("M", "", MktCap)) * 1000000,
+          grepl("K", MktCap, fixed = TRUE) ~
+            as.numeric(gsub("K", "", MktCap)) * 1000),
           #convert - to 0 in PE ratio
           PE = case_when(PE == "-" ~ 0, PE != "-" ~ as.numeric(PE)),
           #remove symbols and convert to numeric
           Price = as.numeric(Price),
-          Change = as.numeric(gsub("%",'',Change)),
-          Volume = as.numeric(gsub(",",'',Volume))
+          Change = as.numeric(gsub("%", "", Change)),
+          Volume = as.numeric(gsub(",", "", Volume))
         ) %>%
         #remove duplicate rows
         unique() %>%
@@ -496,73 +540,81 @@ screener.find_node <- function() {
   }
   skip_to_next <- FALSE
   message("Finding node.")
-  for(node in c(1:40)) {
-    out <- tryCatch(
-      {
+  for (node in c(1:40)) {
+    out <- tryCatch({
         n <- screener.test_node(node)
         cat("\n")
-        message(paste0("Success. Correct node is ",n))
+        message(paste0("Success. Correct node is ", n))
         return(n)
       },
-      error=function(cond) {
+      error = function(cond) {
         skip_to_next <<- TRUE
         return(NA)
       },
-      finally={
-        
+      finally = {
       }
     )
     #if skip bool is true, increase node option by 1
-    if(skip_to_next) { next }
+    if (skip_to_next) {
+      next
+    }
   }
 }
 
-screener.delete_sql <- function(screener,connection) {
+screener.delete_sql <- function(screener, connection) {
   insert <- screener %>%
-    mutate(insert = paste0("'",ticker,"'"))
+    mutate(insert = paste0("'", ticker, "'"))
   statement <- paste0(
     "UPDATE SCREENER SET active = FALSE, date_updated = ",
-    "'",Sys.time(),"'",
+    "'", Sys.time(), "'",
     " WHERE ticker IN (",
-    paste(insert$insert,collapse=','),");")
-  tryCatch(
-    {
-      dbGetQuery(connection,statement)
-      message(paste0(nrow(insert)," set to 'Inactive' in SCREENER."))
+    paste(insert$insert, collapse = ","), ");")
+  tryCatch({
+      dbGetQuery(connection, statement)
+      message(paste0(nrow(insert), " set to 'Inactive' in SCREENER."))
     },
-    error=function(cond) {
+    error = function(cond) {
       #failure
       message("The active switch change in SCREENER failed.")
       message(cond)
     },
-    warning=function(cond) {
+    warning = function(cond) {
       #warning
-      message("The data was turned to inactive in SCREENER, but a warning was raised.")
+      message(
+        paste0(
+          "The data was turned to inactive in SCREENER, ",
+          "but a warning was raised."))
       message(cond)
     },
-    finally={
+    finally = {
       #regardless
-      
     }
   )
 }
 
 screener.update <- function(db) {
-  '%!in%' <- function(x,y)!('%in%'(x,y))
-  finviz <- screener.get("","Overview",0,node)
-  database <- dbGetQuery(db,"SELECT * FROM SCREENER WHERE active = 1;")
-  ins <- finviz %>%
-    filter(Ticker %!in% database$ticker)
-  del <- database %>%
-    filter(ticker %!in% finviz$Ticker)
-  if(nrow(ins)>0) {
-    screener.insert_sql(ins,db)
-  }
-  if(nrow(del)>0) {
-    screener.delete_sql(del,db)
-  }
-  if(nrow(ins)==0 && nrow(del)==0) {
-    message("The database is current.")
+  "%!in%" <- function(x, y)!("%in%" (x, y))
+  node <- screener.find_node()
+  for (exchg in c("AMEX", "NASDAQ", "NYSE")) {
+    finviz <- screener.get(exchg, "Overview", 0, node)
+    database <- dbGetQuery(db,
+                  paste0(
+                    "SELECT * FROM SCREENER ",
+                    "WHERE active = 1 AND exchange = '",
+                    exchg, "';")
+                  )
+    ins <- finviz %>%
+      filter(Ticker %!in% database$ticker)
+    del <- database %>%
+      filter(ticker %!in% finviz$Ticker)
+    if(nrow(ins) > 0) {
+      screener.insert_sql(ins,db)
+    }
+    if(nrow(del) > 0) {
+      screener.delete_sql(del,db)
+    }
+    if(nrow(ins) == 0 && nrow(del) == 0) {
+      message(paste0("The database is current for ", exchg, "."))
+    }
   }
 }
-
