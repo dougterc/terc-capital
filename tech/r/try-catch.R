@@ -1,24 +1,22 @@
 funcName <- function() {
-  out <- tryCatch(
-    {
+  out <- tryCatch({
       #success
       message("")
       return()
     },
-    error=function(cond) {
+    error = function(cond) {
       #failure
       message("")
       return(NA)
     },
-    warning=function(cond) {
+    warning = function(cond) {
       #warning
       message("")
       return(NULL)
     },
-    finally={
+    finally = {
       #regardless
-      
     }
-  )    
+  )
   return(out)
 }

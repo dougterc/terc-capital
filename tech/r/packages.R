@@ -30,5 +30,7 @@ packages.load <- function() {
   require(RMySQL)
   require(DBI)
   require(xfun)
-  '%!in%' <- function(x,y)!('%in%'(x,y))
+  "%!in%" <- function(x,y)!("%in%"(x,y))
+  devtools::install_github("msperlin/yfR", force = TRUE)
+  library(yfR)
 }

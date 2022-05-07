@@ -8,16 +8,14 @@ packages.load()
 #establish connection to database
 mydb <- database.connect(TRUE,'root','Rangers2014!','terc-capital')
 screener.update(mydb)
-
-z <- historical.equities.raw_data(
-    c("AAPL","MSFT","LULU"),
-    as.Date('2021-01-01'),
+tickers <- dbGetQuery(
+        mydb,
+        "SELECT Ticker FROM SCREENER WHERE active = 1;"
+        ) %>%
+        transform(Ticker = gsub(" ", "", Ticker))
+tickers <- c(tickers$Ticker)
+z <- historical.equities.download(
+    as.vector(tickers),
+    Sys.Date() - 365,
     Sys.Date(),
     0)
-
-
-install.packages("Quandl")
-library(Quandl)
-install.packages("devtools")
-library(devtools)
-
