@@ -460,60 +460,79 @@ screener.get <- function(exchange, header, page, node) {
 }
 
 screener.insert_sql <- function(screener, connection) {
-  insert_ready <- screener %>%
-    transform(Company = gsub("'", "*", Company)) %>%
-    transform(Sector = gsub("'", "*", Sector)) %>%
-    transform(Industry = gsub("'", "*", Industry)) %>%
-    mutate(insert = paste0("(",
-                           "'", Ticker, "'", ",",
-                           "'", Exchange, "'", ",",
-                           "'", Company, "'", ",",
-                           "'", Sector, "'", ",",
-                           "'", Industry, "'", ",",
-                           "'", Country, "'", ",",
-                           "'", Sys.time(), "'", ",",
-                           "TRUE",
-                           ")"))
-  insert_state <- paste0(
-    "INSERT INTO SCREENER VALUES ",
-    paste(insert_ready$insert, collapse = ","),
-    ";"
-  )
-  tryCatch(
-    {
-      dbGetQuery(connection,insert_state)
-      message(
-        paste0(
-          nrow(insert_ready),
-          " inserted into SCREENER for ",
-          insert_ready$Exchange[1],
-          ".")
-          )
-    },
-    error = function(cond) {
-      #failure
-      message(
-        paste0(
-          "The data entry into SCREENER failed for ",
-          insert_ready$Exchange[1],
-          ".")
-          )
-      message(cond)
-    },
-    warning = function(cond) {
-      #warning
-      message(
-        paste0(
-          "The data was inserted into SCREENER for ",
-          insert_ready$Exchange[1],
-          " but a warning was raised.")
-          )
-      message(cond)
-    },
-    finally = {
-      #regardless
+  for (i in seq(nrow(screener))) {
+    t <- screener$Ticker[i]
+    fromdb <- dbGetQuery(
+      connection,
+      paste0("SELECT * FROM SCREENER WHERE ticker = '", t, "';")
+    )
+    if (nrow(fromdb) > 0) {
+      update_statement <- paste0(
+        "UPDATE SCREENER SET exchange = '",
+        screener$Exchange[i],
+        "', active = 1, date_updated = '",
+        Sys.time(),
+        "' WHERE ticker = '",
+        t,
+        "';")
+      dbGetQuery(connection, update_statement)
+    } else {
+      insert_ready <- screener[i, ] %>%
+        transform(Company = gsub("'", "*", Company)) %>%
+        transform(Sector = gsub("'", "*", Sector)) %>%
+        transform(Industry = gsub("'", "*", Industry)) %>%
+        mutate(insert = paste0("(",
+                              "'", Ticker, "'", ",",
+                              "'", Exchange, "'", ",",
+                              "'", Company, "'", ",",
+                              "'", Sector, "'", ",",
+                              "'", Industry, "'", ",",
+                              "'", Country, "'", ",",
+                              "'", Sys.time(), "'", ",",
+                              "TRUE",
+                              ")"))
+      insert_state <- paste0(
+        "INSERT INTO SCREENER VALUES ",
+        paste(insert_ready$insert, collapse = ","),
+        ";"
+      )
+      tryCatch(
+        {
+          dbGetQuery(connection,insert_state)
+          message(
+            paste0(
+              t,
+              " inserted into SCREENER for ",
+              insert_ready$Exchange[1],
+              ".")
+              )
+        },
+        error = function(cond) {
+          #failure
+          message(
+            paste0(
+              "The data entry into SCREENER failed for ",
+              insert_ready$Exchange[1],
+              ".")
+              )
+          message(cond)
+        },
+        warning = function(cond) {
+          #warning
+          message(
+            paste0(
+              "The data was inserted into SCREENER for ",
+              insert_ready$Exchange[1],
+              " but a warning was raised.")
+              )
+          message(cond)
+        },
+        finally = {
+          #regardless
+        }
+      )
     }
-  )
+  }
 }
 
 screener.find_node <- function() {
