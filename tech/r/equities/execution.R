@@ -14,8 +14,17 @@ tickers <- dbGetQuery(
         ) %>%
         transform(Ticker = gsub(" ", "", Ticker))
 tickers <- c(tickers$Ticker)
-z <- historical.equities.download(
-    as.vector(tickers),
-    Sys.Date() - 365,
-    Sys.Date(),
-    0)
+for (ticker in tickers) {
+    z <- historical.equities.get(
+        ticker,
+        Sys.Date() - 365,
+        Sys.Date(),
+        0
+    )
+    if (ticker == tickers[1]) {
+        data <- z
+    } else {
+        data <- rbind(data, z)
+    }
+    Sys.sleep(0.125)
+}

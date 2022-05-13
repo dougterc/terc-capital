@@ -6,8 +6,6 @@ historical.equities.get <- function(ticker, first_date, last_date, tbd) {
     thresh_bad_data = tbd,
     freq_data = "daily") %>%
       filter(!is.na(ret_adjusted_prices))
-  horizontal <- yfR::yf_convert_to_wide(vertical)
-  data <- list(vertical, horizontal)
   return(temp)
 }
 
@@ -29,6 +27,20 @@ historical.equities.download <- function(tickers, first_date, last_date, tbd) {
     #if skip bool is true, increase node option by 1
     if (skip_to_next) {
       next
+    } else {
+      if(exists("ret")) {
+        ret <- rbind(ret, out)
+      } else {
+        ret <- out
+      }
     }
   }
+  return(ret)
+}
+
+#local function to insert historical into database
+historical.equities.insert_sql <- function(db, df) {
+  
+
+
 }
