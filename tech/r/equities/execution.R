@@ -1,7 +1,7 @@
-source("~/terc-capital/tech/r/packages.R")
-source("~/terc-capital/tech/r/db-connection.R")
-source("~/terc-capital/tech/r/screener.R")
-source("~/terc-capital/tech/r/historical.R")
+source("~/terc-capital/tech/r/equities/packages.R")
+source("~/terc-capital/tech/r/equities/db-connection.R")
+source("~/terc-capital/tech/r/equities/screener.R")
+source("~/terc-capital/tech/r/equities/historical.R")
 
 #load packages
 packages.load()
@@ -15,16 +15,16 @@ tickers <- dbGetQuery(
         transform(Ticker = gsub(" ", "", Ticker))
 tickers <- c(tickers$Ticker)
 for (ticker in tickers) {
-    z <- historical.equities.get(
+    z <- historical_equities_get(
         ticker,
         Sys.Date() - 365,
         Sys.Date(),
         0
     )
-    if (ticker == tickers[1]) {
-        data <- z
+    if (nrow(z) == 0) {
+        next
     } else {
-        data <- rbind(data, z)
+        historical_equities_insert_sql(mydb, z)
+        Sys.sleep(0.25)
     }
-    Sys.sleep(0.125)
 }

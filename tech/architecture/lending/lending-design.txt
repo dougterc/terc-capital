@@ -1,0 +1,33 @@
+Hard money lending and college lending discovery, operations, and crowd-funding site.
+
+application information
+workflows
+signed loans in progress and loan information
+offerings with offering information
+offering shares tied to offering and users
+transactions
+
+
+Workflow - Hard money
+User applies for proposed project
+    - redacted floor plans
+    - type of investment (flip, purch & resell, etc)
+    - plans for project (what they are improving or why they expect money coming)
+    - current condition and details
+    - amount they are seeking
+    - rate they are willing to pay and terms
+    - specs for a model?
+
+Proposed project shows up in Review workflow for our team
+    - model automatically projects ROI?
+    - price each share and share count (or should this be auto/up to user)
+    - Project approved and posted (notification to users?)
+
+Contracts automatically written for project and held on file
+
+Offer date set. Once offering opens, shares can be purchased until full
+
+
+**KEY**
+Find math treating Real Estate and Loans like stocks
+    - Initial offering, then market cap vs asset value
