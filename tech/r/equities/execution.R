@@ -14,17 +14,9 @@ tickers <- dbGetQuery(
         ) %>%
         transform(Ticker = gsub(" ", "", Ticker))
 tickers <- c(tickers$Ticker)
-for (ticker in tickers) {
-    z <- historical_equities_get(
-        ticker,
-        Sys.Date() - 365,
-        Sys.Date(),
-        0
-    )
-    if (nrow(z) == 0) {
-        next
-    } else {
-        historical_equities_insert_sql(mydb, z)
-        Sys.sleep(0.25)
-    }
-}
+
+#delete
+dbGetQuery(mydb, "DELETE FROM HIST_DATA WHERE ticker != ' ';")
+dbGetQuery(mydb, "ALTER TABLE tablename AUTO_INCREMENT = 1;")
+
+failcount <- historical_equities_update(mydb)
