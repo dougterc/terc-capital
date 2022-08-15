@@ -343,6 +343,7 @@ trade <- trade %>%
     cash = seed.money,
     shares = 0,
     cost = 0,
+    execution = NA,
     pos = shares * cost,
     port.value = cash + pos,
     port.ret = 0,
@@ -388,6 +389,53 @@ for(d in seq(length(sim.dates))) {
   trade$diff[d] <- macd.data$diff[idx]
   trade$deriv[d] <- macd.data$deriv[idx]
   trade$trigger[d] <- macd.data$trigger[idx]
-  
-  
+  if(d == 1) {
+    #first iteration
+    if(trade$trigger[d] == "BUY") {
+      trade$cost[d] <- trade$open[d]
+      trade$shares[d] <- floor(trade$cash[d] / trade$cost[d])
+      trade$cash[d] <- trade$cash[d] - (trade$cost[d] * trade$shares[d])
+    }
+  } else {
+    #remaining iterations
+    if(trade$trigger[d] == "BUY") {
+      if(trade$shares[d-1] == 0) {
+        #BUY
+        trade$cost[d] <- trade$open[d]
+        trade$shares[d] <- floor(trade$cash[d-1] / trade$cost[d])
+        trade$cash[d] <- trade$cash[d-1] - (trade$cost[d] * trade$shares[d])
+        trade$execution[d] <- "EXECUTED"
+      } else {
+        #HOLD and carry, repeat buy signal
+        trade$cost[d] <- trade$cost[d-1]
+        trade$shares[d] <- trade$shares[d-1]
+        trade$cash[d] <- trade$cash[d-1]
+        trade$execution[d] <- "IGNORED"
+      }
+    } else if(trade$trigger[d] == "SELL") {
+      if(trade$shares[d-1] > 0) {
+        #SELL
+        trade$cost[d] <- 0
+        trade$shares[d] <- 0
+        trade$cash[d] <- trade$cash[d-1] + (trade$shares[d-1] * trade$open[d])
+        trade$execution[d] <- "EXECUTED"
+      } else {
+        #HOLD and carry, repeat sell signal
+        trade$cost[d] <- trade$cost[d-1]
+        trade$shares[d] <- trade$shares[d-1]
+        trade$cash[d] <- trade$cash[d-1]
+        trade$execution[d] <- "IGNORED"
+      }
+    } else {
+      #HOLD and carry
+      trade$cost[d] <- trade$cost[d-1]
+      trade$shares[d] <- trade$shares[d-1]
+      trade$cash[d] <- trade$cash[d-1]
+    }
+  }#end of buy/sell else statement
+  #calculate end of day portfolio value and P&L
+  trade$pos[d] <- trade$shares[d] * trade$close[d]
+  trade$port.value <- trade$cash[d] + trade$pos[d]
+  trade$port.ret <- ((trade$port.value[d] / trade$port.value[d-1]) - 1)
+  trade$port.cumul.ret <- ((trade$port.value[d] / seed.money) - 1)
 }#end simulation for loop
