@@ -308,7 +308,7 @@ macd.derivative.equation.next <- function(equation) {
 #-------
 macd.packages.load()
 
-ticker <- "NFLX"
+ticker <- "GE"
 data.close <- macd.data.close(ticker, Sys.Date()-365, Sys.Date(),120)
 data.open <- macd.data.open(ticker, Sys.Date()-365, Sys.Date(),120)
 data.macd <- macd.add.macd(data.close, 12, 26, 9) %>%
@@ -464,4 +464,6 @@ ggplot(data.trade) +
 paste0("Portfolio: ",
        round(data.trade$total.ret[length(index(data.trade))]*100,2),"% | ",
        ticker,": ",round(data.trade$cumulative[length(index(data.trade))]*100,2),"%")
+write_csv(data.trade,paste0("~/terc-capital/tech/functions/",ticker,"_trades.csv"))
 
+          
