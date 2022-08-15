@@ -322,12 +322,72 @@ end.date <- as.Date("2022-07-31")
 sim.dates <- dates[dates >= start.date & dates <= end.date]
 sim.dates
 
+upBuffer <- 0.00
+dnBuffer <- 0.00
+seed.money <- 10000
+
+#initialize tracker table. open, close, diff, deriv, trigger, shares, cost, pos, cash, value, return, etc.
+
+trade <- data.open %>%
+  as.data.frame() %>%
+  mutate(date = rownames(.)) %>%
+  select(date, open) %>%
+  left_join(data.close%>%as.data.frame()%>%mutate(date=rownames(.)),by=c("date"="date")) %>%
+  transform(date = as.Date(date))
+trade <- trade %>%
+  filter(date %in% sim.dates) %>%
+  mutate(
+    diff = 0,
+    deriv = 0,
+    trigger = NA,
+    cash = seed.money,
+    shares = 0,
+    cost = 0,
+    pos = shares * cost,
+    port.value = cash + pos,
+    port.ret = 0,
+    port.cumul.ret =0
+  )
+
+#simulation
 for(d in seq(length(sim.dates))) {
   lb.dates <- dates[dates <= sim.dates[d] & dates >= sim.dates[d]-lb]
   c.data <- data.close[index(data.close) %in% lb.dates]
   #replace current day price with open. we dont know close yet, but we basically know open to run before
   # market opens. this gets us as close as possible with trigger
   c.data$close[length(index(c.data))] <- data.open$open[index(data.open) %in% c(sim.dates[d])]
+  macd.data <- macd.add.macd(c.data, 12, 26, 9) %>%
+    as.data.frame() %>%
+    filter(!is.na(MACD) & !is.na(signal) & !is.na(diff)) %>%
+    mutate(deriv = 0)
+  for(a in seq(length(index(macd.data)))) {
+    if(a > 1) {
+      #only change starting index 2. first has no change basis, keep 0
+      macd.data$deriv[a] <- macd.data$diff[a] - macd.data$diff[a-1]
+    }
+  }#end deriv for loop
+  macd.data <- macd.data %>%
+    mutate(trigger = NA)
+  for(b in seq(length(index(macd.data)))) {
+    if(b == 1) {
+      macd.data$trigger[b] <- "HOLD"
+    } else {
+      last <- macd.data$deriv[b-1]
+      now <- macd.data$deriv[b]
+      if(last < (0 - dnBuffer) & now > (0 + upBuffer)) {
+        macd.data$trigger[b] <- "BUY"
+      } else if(last > (0 + upBuffer) & now < (0 - dnBuffer)) {
+        macd.data$trigger[b] <- "SELL"
+      } else {
+        macd.data$trigger[b] <- "HOLD"
+      }
+    }#end non-first-iteration else
+  }#end trigger set for loop
+  #set factors in trade log for current day
+  idx <- length(index(macd.data))
+  trade$diff[d] <- macd.data$diff[idx]
+  trade$deriv[d] <- macd.data$deriv[idx]
+  trade$trigger[d] <- macd.data$trigger[idx]
   
   
-}
+}#end simulation for loop
