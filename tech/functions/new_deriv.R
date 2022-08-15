@@ -445,3 +445,6 @@ for(d in seq(length(sim.dates))) {
     trade$stock.cumul.ret[d] <- ((trade$close[d] / trade$close[1]) - 1)
   }
 }#end simulation for loop
+
+
+write_csv(trade, paste0("./",ticker,"_trade",round(trade$port.cumul.ret[nrow(trade)],5),".csv"))
