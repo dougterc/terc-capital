@@ -37,8 +37,8 @@ macd.packages.load <- function() {
   library(caTools)
   library(forecast)
 }
-
-macd.data.close <- function(ticker, start.date, end.date, back) {
+#---
+macd.data.close <- function(ticker, start.date, end.date, back.grab) {
   stock.data <- getSymbols(
     Symbols = ticker,
     src = "yahoo",
@@ -50,8 +50,8 @@ macd.data.close <- function(ticker, start.date, end.date, back) {
   cl.data <- Cl(stock.data)
   return(cl.data)
 }
-
-macd.data.open <- function(ticker, start.date, end.date, back) {
+#---
+macd.data.open <- function(ticker, start.date, end.date, back.grab) {
   stock.data <- getSymbols(
     Symbols = ticker,
     src = "yahoo",
@@ -63,7 +63,7 @@ macd.data.open <- function(ticker, start.date, end.date, back) {
   op.data <- Op(stock.data)
   return(op.data)
 }
-
+#---
 macd.add.macd <- function (price, S, L, K){
   MACD <- EMA(price,S) - EMA(price,L)
   signal <- EMA(MACD,K)
@@ -72,32 +72,32 @@ macd.add.macd <- function (price, S, L, K){
   colnames(output) <- c("MACD","signal","diff")
   return(output)
 }
-
+#---
 macd.data.frame.back <- function(ts.data) {
   df <- as.data.frame(ts.data) %>%
     mutate(refdate = as.Date(rownames(.)))
   return(df)
 }
-
+#---
 macd.data.frame <- function(ts.data, start, end) {
   df <- as.data.frame(ts.data) %>%
     mutate(refdate = as.Date(rownames(.))) %>%
     filter(refdate >= start & refdate <= end)
   return(df)
 }
-
+#---
 macd.sim.dates <- function(ts.data, start, end) {
   df <- macd.data.frame(ts.data, start, end)
   sim.dates <- c(df$refdate)
   return(sim.dates)
 }
-
+#---
 macd.research.data <- function(ts.data, current.date, back) {
   max.idx <- grep(current.date, index(ts.data))
   ret <- ts.data[c((max.idx - back):(max.idx-1))]
   return(ret)
 }
-
+#---
 macd.research.trend <- function(macd.data) {
   macd.data <- transform(macd.data, trend = 0)
   for(i in seq(nrow(macd.data))) {
@@ -115,7 +115,7 @@ macd.research.trend <- function(macd.data) {
   }
   return(macd.data)
 }
-
+#---
 macd.sim.get.signal <- function(trend.data, trip.margin, trip.back) {
   idx <- nrow(trend.data)
   #if under 0 within margin and past back have been up, buy signal
@@ -141,7 +141,7 @@ macd.sim.get.signal <- function(trend.data, trip.margin, trip.back) {
   }
   return(signal)
 }
-
+#---
 macd.track.setup <- function(day.zero, start.value) {
   pf <- tribble(
     ~ticker, ~shares, ~cost,
@@ -169,7 +169,7 @@ macd.track.setup <- function(day.zero, start.value) {
     `names<-`(c("pf","t","pl","s"))
   return(items)
 }
-
+#---
 macd.sim.sell <- function(ticker, track, open, current.date) {
   loc <- grep(ticker, track$pf$ticker)
   loc.b <- grep(current.date, track$pl$date)
@@ -197,7 +197,7 @@ macd.sim.sell <- function(ticker, track, open, current.date) {
   track$pl$current.value[loc.b] <- track$pl$positions[loc.b] + track$pl$cash[loc.b]
   return(track)
 }
-
+#---
 macd.sim.buy <- function(ticker, track, open, current.date) {
   loc.b <- grep(current.date, track$pl$date)
   op.price <- as.data.frame(open[index(open) %in% c(as.Date(current.date))])[1,1]
@@ -238,7 +238,7 @@ macd.sim.buy <- function(ticker, track, open, current.date) {
   track$pl$current.value[loc.b] <- track$pl$positions[loc.b] + track$pl$cash[loc.b]
   return(track)
 }
-
+#---
 macd.sim.eod <- function(track, data, current.date, start.value) {
   if(nrow(track$pf) == 0) {
     track$pl$positions[nrow(track$pl)]  <- 0
@@ -249,4 +249,76 @@ macd.sim.eod <- function(track, data, current.date, start.value) {
     track$pl$cash[nrow(track$pl)]
   track$pl$profit[nrow(track$pl)] <- track$pl$current.value[nrow(track$pl)] - start.value
   return(track)
+}
+#---
+macd.derivative.equation <- function(equation) {
+  int.loc <- grep("(Intercept)",names(equation$coefficients))
+  if(length(int.loc)>0) {
+    coeff <- equation$coefficients[-int.loc]
+  }
+  new.equation <- c(coeff[1] %>% `names<-`(c("Intercept")))
+  for(n in c(2:length(coeff))) {
+    new.power <- n-1
+    new.equation <- append(new.equation, (coeff[n] * n) %>% `names<-`(c(new.power)))
+  }
+  for(i in seq(length(new.equation))) {
+    if(is.na(new.equation[i])) {
+      new.equation[i] <- 0
+    }
+  }
+  return(new.equation)
+}
+#---
+macd.derivative.calculate <- function(equation, x) {
+  intercept <- equation[grep("Intercept",names(equation))] %>% `names<-`(c())
+  sum <- intercept
+  for(n in c(2:length(equation))) {
+    sum <- sum + (equation[n] * (x^(n-1)))
+  }
+  return(sum)
+}
+#---
+macd.equation.fit <- function(df, max.fit) {
+  for(i in c(1:max.fit)) {
+    if(i == 1) {
+      fits <- tribble(
+        ~fit,~r.squared,
+        0,0.0
+      ) %>%
+        filter(fit != 0)
+      fit <- lm(y~x, data=df)
+    } else {
+      fit <- lm(y~poly(x,i,raw=TRUE), data=df)
+    }
+    temp <- data.frame(x = i, y = summary(fit)$adj.r.squared)
+    fits <- rbind(fits, temp)
+  }
+  fits<- fits %>%
+    arrange(desc(y))
+  if(fits$x[1] == 1) {
+    fit <- lm(y~x, data=df)
+  } else {
+    fit <- lm(y~poly(x,fits$x[1],raw=TRUE), data=df)
+  }
+  items <- list(fit, fits) %>%
+    `names<-`(c("equation","r.squares"))
+  return(items)
+}
+#---
+macd.derivative.equation.next <- function(equation) {
+  equation <- equation[-grep("Intercept",names(equation))]
+  #non equation, just vector. used for second and more
+  if(length(equation) > 1) {
+    new.equation <- c(equation[1] %>% `names<-`(c("Intercept")))
+    for(n in c(2:length(equation))) {
+      new.power <- n-1
+      new.equation <- append(new.equation, (equation[n] * n) %>% `names<-`(c(new.power)))
+    }
+  }
+  for(i in seq(length(new.equation))) {
+    if(is.na(new.equation[i])) {
+      new.equation[i] <- 0
+    }
+  }
+  return(new.equation)
 }
