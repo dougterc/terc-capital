@@ -347,7 +347,9 @@ trade <- trade %>%
     pos = shares * cost,
     port.value = cash + pos,
     port.ret = 0,
-    port.cumul.ret =0
+    port.cumul.ret = 0,
+    stock.ret = 0,
+    stock.cumul.ret = 0
   )
 
 #simulation
@@ -435,7 +437,11 @@ for(d in seq(length(sim.dates))) {
   }#end of buy/sell else statement
   #calculate end of day portfolio value and P&L
   trade$pos[d] <- trade$shares[d] * trade$close[d]
-  trade$port.value <- trade$cash[d] + trade$pos[d]
-  trade$port.ret <- ((trade$port.value[d] / trade$port.value[d-1]) - 1)
-  trade$port.cumul.ret <- ((trade$port.value[d] / seed.money) - 1)
+  trade$port.value[d] <- trade$cash[d] + trade$pos[d]
+  if(d > 1) {
+    trade$port.ret[d] <- ((trade$port.value[d] / trade$port.value[d-1]) - 1)
+    trade$port.cumul.ret[d] <- ((trade$port.value[d] / seed.money) - 1)
+    trade$stock.ret[d] <- ((trade$close[d] / trade$close[d-1]) - 1)
+    trade$stock.cumul.ret[d] <- ((trade$close[d] / trade$close[1]) - 1)
+  }
 }#end simulation for loop
