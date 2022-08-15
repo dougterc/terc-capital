@@ -365,11 +365,11 @@ data.macd <- data.macd %>%
 upBuffer <- 0.00
 dnBuffer <- 0.00
 for(b in seq(length(index(data.macd)))) {
-  if(b == 1) {
+  if(b <= 2) {
     data.macd$trigger[b] <- "HOLD"
   } else {
-    last <- data.macd$chgA[b-1]
-    now <- data.macd$chgA[b]
+    last <- data.macd$chgA[b-2]
+    now <- data.macd$chgA[b-1]
     if(last < (0 - dnBuffer) & now > (0 + upBuffer)) {
       data.macd$trigger[b] <- "BUY"
     } else if(last > (0 + upBuffer) & now < (0 - dnBuffer)) {
