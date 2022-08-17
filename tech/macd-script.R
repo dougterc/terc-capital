@@ -2,10 +2,10 @@ source("./tech/functions/macd.R")
 
 macd.packages.load()
 
-ticker <- "MN"
-start.date <- as.Date("2021-01-01")
+ticker <- "F"
+start.date <- as.Date("2022-01-01")
 back.grab <- 180
-end.date <- as.Date("2022-06-01")
+end.date <- as.Date("2022-07-31")
 pf.value <- 50000
 
 
