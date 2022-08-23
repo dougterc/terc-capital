@@ -1,4 +1,7 @@
-source("./tech/functions/macd.R")
+#can now source file at scale.
+x <- getwd()
+y <- paste(x, "functions/macd.R", sep = "/")
+source(y)
 
 macd.packages.load()
 
